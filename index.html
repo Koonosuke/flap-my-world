@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>岸 幸之介 - Flappy Portfolio (11月中旬からラボ常駐したい！)</title>
+  <meta name="description" content="岸 幸之介の自己紹介 × Flappy Birdゲーム。障害物を乗り越えてエッジLLM研究、AWS、趣味などの自己紹介をアンロックしよう！">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Font Awesome CDN -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <!-- Canvas Confetti CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+  <!-- Custom Styles -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
+
+  <!-- サイトヘッダー -->
+  <header class="border-b border-slate-800 bg-slate-900/70 backdrop-blur-md sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 py-3 sm:px-6 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <!-- アバターミニサムネイル -->
+        <div class="w-10 h-10 rounded-full overflow-hidden border-2 border-sky-400 shadow-md shadow-sky-500/20 shrink-0">
+          <img src="avatar.jpg" alt="岸 幸之介" class="w-full h-full object-cover">
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <h1 class="font-extrabold text-base sm:text-lg tracking-tight text-white">
+              岸 幸之介 <span class="text-xs font-normal text-slate-400 font-mono">(キシ コウノスケ)</span>
+            </h1>
+            <span class="hidden sm:inline-block text-[11px] px-2 py-0.5 rounded-full bg-rose-500/15 text-rose-300 border border-rose-500/30 font-bold">
+              🔥 ラボ常駐希望
+            </span>
+          </div>
+          <p class="text-[11px] text-sky-400 font-medium">エッジLLM研究 / クラウド・Web開発</p>
+        </div>
+      </div>
+
+      <!-- アクションボタン -->
+      <div class="flex items-center space-x-2 sm:space-x-3">
+        <!-- 全解放スイッチ -->
+        <label class="hidden sm:flex items-center space-x-2 text-xs bg-slate-800/80 hover:bg-slate-800 px-3 py-1.5 rounded-full border border-slate-700 cursor-pointer transition">
+          <input type="checkbox" id="unlockAllToggle" class="sr-only peer">
+          <div class="w-7 h-4 bg-slate-600 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-sky-500"></div>
+          <span class="text-slate-300 peer-checked:text-sky-300 font-medium">全セクションを即時表示</span>
+        </label>
+
+        <!-- サウンド切り替え -->
+        <button id="muteToggleBtn" class="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-sm border border-slate-700 transition" title="サウンド切り替え">
+          <i class="fas fa-volume-up text-sky-400"></i>
+        </button>
+
+        <!-- X (Twitter) シェア -->
+        <button id="shareOnXBtn" class="flex items-center space-x-1.5 text-xs font-semibold px-3 py-2 bg-slate-800 hover:bg-slate-700 text-sky-400 rounded-xl border border-slate-700 transition">
+          <i class="fab fa-x-twitter"></i>
+          <span class="hidden md:inline">シェア</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- メインコンテンツ -->
+  <main class="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-6 md:py-8">
+    
+    <!-- モバイル用全解放トグル -->
+    <div class="sm:hidden mb-4 p-2.5 bg-slate-900 rounded-xl border border-slate-800 flex items-center justify-between">
+      <span class="text-xs text-slate-300">ゲームなしで全プロフィールを見る</span>
+      <label class="flex items-center space-x-2 text-xs cursor-pointer">
+        <input type="checkbox" id="unlockAllToggleMobile" onchange="document.getElementById('unlockAllToggle').checked = this.checked; document.getElementById('unlockAllToggle').dispatchEvent(new Event('change'));" class="sr-only peer">
+        <div class="w-7 h-4 bg-slate-600 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-sky-500"></div>
+      </label>
+    </div>
+
+    <!-- 2カラムレイアウト: 左=ゲーム / 右=自己紹介ポートフォリオ -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      
+      <!-- 左カラム: ゲームステーション (LG: 5カラム) -->
+      <section class="lg:col-span-5 flex flex-col items-center lg:sticky lg:top-20">
+        
+        <!-- ゲームコンテナ枠 -->
+        <div class="relative bg-slate-900 p-3 sm:p-4 rounded-3xl border border-slate-800 shadow-2xl w-full max-w-[390px]">
+          
+          <!-- ゲーム上部HUD (スコア・ハイスコア) -->
+          <div class="flex items-center justify-between mb-3 px-2">
+            <div class="hud-badge px-3 py-1.5 rounded-xl flex items-center space-x-2">
+              <span class="text-[10px] text-slate-400 font-mono">SCORE</span>
+              <span id="currentScoreDisplay" class="pixel-font text-lg text-white font-bold">0</span>
+            </div>
+            <div class="hud-badge px-3 py-1.5 rounded-xl flex items-center space-x-2">
+              <span class="text-[10px] text-amber-400 font-mono"><i class="fas fa-trophy mr-1"></i>BEST</span>
+              <span id="highScoreDisplay" class="pixel-font text-base text-amber-400 font-bold">0</span>
+            </div>
+          </div>
+
+          <!-- HTML5 Canvas ゲーム画面 -->
+          <div class="relative rounded-2xl overflow-hidden border-2 border-slate-700/60 bg-sky-950 flex justify-center">
+            <canvas id="gameCanvas" class="w-full max-w-[360px] h-[480px] sm:h-[500px] block cursor-pointer"></canvas>
+          </div>
+
+          <!-- ゲーム下部コントロール & 操作ヒント -->
+          <div class="mt-3 flex items-center justify-between px-1">
+            <div class="flex items-center text-xs text-slate-400 space-x-1.5">
+              <span class="px-2 py-0.5 bg-slate-800 rounded font-mono text-[11px] border border-slate-700">Space</span>
+              <span>またはタップでヒヨコが飛ぶ！</span>
+            </div>
+            <button id="restartBtn" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white px-2.5 py-1 rounded-lg border border-slate-700 transition flex items-center">
+              <i class="fas fa-rotate-right mr-1 text-slate-400"></i> リセット
+            </button>
+          </div>
+        </div>
+
+        <!-- 解放進捗ミニガイド -->
+        <div class="w-full max-w-[390px] mt-4 p-4 bg-slate-900/60 rounded-2xl border border-slate-800/80">
+          <div class="flex items-center justify-between text-xs mb-2">
+            <span class="font-bold text-slate-300 flex items-center">
+              <i class="fas fa-rocket text-amber-400 mr-1.5"></i> ラボ常駐への進捗
+            </span>
+            <span id="unlockProgressText" class="text-slate-400 font-mono text-[11px]">0% アンロック</span>
+          </div>
+          <!-- プログレスバー -->
+          <div class="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden mb-3">
+            <div id="unlockProgressBar" class="h-full bg-gradient-to-r from-sky-400 via-teal-400 to-emerald-400 w-0 transition-all duration-500 rounded-full"></div>
+          </div>
+          <div class="grid grid-cols-3 gap-1.5 text-[10px] text-slate-400 text-center font-mono">
+            <div class="p-1 bg-slate-800/40 rounded border border-slate-800">1pt: 目標</div>
+            <div class="p-1 bg-slate-800/40 rounded border border-slate-800">3pt: 技術/研究</div>
+            <div class="p-1 bg-slate-800/40 rounded border border-slate-800">6pt: 活動</div>
+            <div class="p-1 bg-slate-800/40 rounded border border-slate-800">9pt: 趣味</div>
+            <div class="p-1 bg-slate-800/40 rounded border border-slate-800">12pt: ラボ意気込み</div>
+            <div class="p-1 bg-slate-800/40 rounded border border-slate-800 text-emerald-400 font-bold">15pt: 常駐確定🎉</div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- 右カラム: 自己紹介カード群 (LG: 7カラム) -->
+      <section class="lg:col-span-7 space-y-6">
+
+        <!-- プロフィールヘッダーカード (スライドデザイン完全再現 & 強化) -->
+        <div class="bg-gradient-to-br from-slate-900 via-slate-900 to-sky-950/40 p-6 rounded-3xl border border-slate-800 shadow-2xl relative overflow-hidden">
+          <div class="absolute -right-8 -top-8 w-44 h-44 bg-sky-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+          <div class="flex flex-col sm:flex-row items-center sm:items-start space-y-4 sm:space-y-0 sm:space-x-6">
+            <!-- 写真アイコン (水色リング・肩のヒヨコがポイント) -->
+            <div class="relative shrink-0">
+              <div class="w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden border-4 border-sky-400 shadow-xl shadow-sky-500/30">
+                <img src="avatar.jpg" alt="岸 幸之介" class="w-full h-full object-cover">
+              </div>
+              <div class="absolute -bottom-1 -right-1 bg-amber-400 text-slate-950 font-bold text-[11px] px-2 py-0.5 rounded-full shadow border-2 border-slate-900 flex items-center">
+                🐥 相棒
+              </div>
+            </div>
+
+            <!-- 名前 & キャッチコピー -->
+            <div class="flex-1 text-center sm:text-left">
+              <div class="flex flex-col sm:flex-row sm:items-baseline space-y-1 sm:space-y-0 sm:space-x-3 mb-2">
+                <h2 id="profileHeaderName" class="text-2xl sm:text-3xl font-extrabold text-white tracking-wide"></h2>
+                <span id="profileHeaderKana" class="text-sm font-medium text-slate-400 font-mono"></span>
+              </div>
+
+              <!-- スライドのメインスローガン -->
+              <div class="inline-block my-2 px-4 py-2 bg-gradient-to-r from-rose-500/20 via-amber-500/20 to-sky-500/20 border border-rose-500/40 rounded-2xl">
+                <span id="profileHeaderTagline" class="text-base sm:text-lg font-black tracking-wide bg-gradient-to-r from-white via-amber-200 to-rose-200 bg-clip-text text-transparent"></span>
+              </div>
+
+              <p id="profileHeaderTitle" class="text-xs sm:text-sm font-semibold text-sky-400 mt-1"></p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 1. 目標・宣言 (スコア1で解放) -->
+        <div id="section-target" class="locked-card bg-slate-900/90 p-6 rounded-3xl border border-slate-800 relative transition-all duration-300">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-bold text-lg text-white flex items-center">
+              <i class="fas fa-bullseye text-rose-400 mr-2.5"></i> Mission / 目標
+            </h3>
+            <span class="lock-badge text-xs px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 font-medium">
+              <i class="fas fa-lock mr-1.5"></i> スコア 1 でアンロック
+            </span>
+          </div>
+          <div id="content-target" class="card-content opacity-20 blur-[2px] transition-all duration-300"></div>
+        </div>
+
+        <!-- 2. 技術 & エッジLLM研究 (スコア3で解放) -->
+        <div id="section-tech" class="locked-card bg-slate-900/90 p-6 rounded-3xl border border-slate-800 relative transition-all duration-300">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-bold text-lg text-white flex items-center">
+              <i class="fas fa-microchip text-sky-400 mr-2.5"></i> Tech & Research / 技術と研究内容
+            </h3>
+            <span class="lock-badge text-xs px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 font-medium">
+              <i class="fas fa-lock mr-1.5"></i> スコア 3 でアンロック
+            </span>
+          </div>
+          <div id="content-tech" class="card-content opacity-20 blur-[2px] transition-all duration-300"></div>
+        </div>
+
+        <!-- 3. 活動実績 (スコア6で解放) -->
+        <div id="section-activity" class="locked-card bg-slate-900/90 p-6 rounded-3xl border border-slate-800 relative transition-all duration-300">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-bold text-lg text-white flex items-center">
+              <i class="fas fa-briefcase text-emerald-400 mr-2.5"></i> Activities & Experience / 活動
+            </h3>
+            <span class="lock-badge text-xs px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 font-medium">
+              <i class="fas fa-lock mr-1.5"></i> スコア 6 でアンロック
+            </span>
+          </div>
+          <div id="content-activity" class="card-content opacity-20 blur-[2px] transition-all duration-300"></div>
+        </div>
+
+        <!-- 4. 趣味・カルチャー (スコア9で解放) -->
+        <div id="section-hobbies" class="locked-card bg-slate-900/90 p-6 rounded-3xl border border-slate-800 relative transition-all duration-300">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-bold text-lg text-white flex items-center">
+              <i class="fas fa-heart text-rose-400 mr-2.5"></i> Hobbies & Culture / 趣味
+            </h3>
+            <span class="lock-badge text-xs px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 font-medium">
+              <i class="fas fa-lock mr-1.5"></i> スコア 9 でアンロック
+            </span>
+          </div>
+          <div id="content-hobbies" class="card-content opacity-20 blur-[2px] transition-all duration-300"></div>
+        </div>
+
+        <!-- 5. ラボ常駐への意気込み (スコア12で解放) -->
+        <div id="section-labGoal" class="locked-card bg-slate-900/90 p-6 rounded-3xl border border-slate-800 relative transition-all duration-300">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-bold text-lg text-white flex items-center">
+              <i class="fas fa-flask-vial text-indigo-400 mr-2.5"></i> Commitment / ラボで実現したいこと
+            </h3>
+            <span class="lock-badge text-xs px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 font-medium">
+              <i class="fas fa-lock mr-1.5"></i> スコア 12 でアンロック
+            </span>
+          </div>
+          <div id="content-labGoal" class="card-content opacity-20 blur-[2px] transition-all duration-300"></div>
+        </div>
+
+        <!-- 6. お問い合わせ・常駐オファー (スコア15で解放) -->
+        <div id="section-contact" class="locked-card bg-slate-900/90 p-6 rounded-3xl border border-slate-800 relative transition-all duration-300">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-bold text-lg text-white flex items-center">
+              <i class="fas fa-handshake text-emerald-400 mr-2.5"></i> Connect / ラボ常駐面談・お問い合わせ
+            </h3>
+            <span class="lock-badge text-xs px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 font-medium">
+              <i class="fas fa-lock mr-1.5"></i> スコア 15 で完全解放
+            </span>
+          </div>
+          <div id="content-contact" class="card-content opacity-20 blur-[2px] transition-all duration-300"></div>
+        </div>
+
+      </section>
+
+    </div>
+  </main>
+
+  <!-- トースト通知 -->
+  <div id="gameToast" class="fixed bottom-6 right-6 z-50 bg-slate-900/95 text-white px-5 py-3 rounded-2xl border border-sky-400/50 shadow-2xl shadow-sky-500/20 text-sm font-semibold transition-all duration-300 opacity-0 translate-y-4 pointer-events-none">
+    🎉 アンロックされました！
+  </div>
+
+  <!-- フッター -->
+  <footer class="border-t border-slate-800/80 bg-slate-900/40 py-6 mt-12 text-center text-xs text-slate-500">
+    <p>岸 幸之介 × Flappy Portfolio &copy; 2026</p>
+    <p class="mt-1">障害物（メモリ制約・レイテンシ・AWSコスト）を越えて、11月中旬ラボ常駐へ！🔥</p>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="data.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>

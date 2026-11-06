@@ -1,0 +1,105 @@
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;700&display=swap');
+
+:root {
+  --primary-accent: #38bdf8;
+  --secondary-accent: #f43f5e;
+  --game-gold: #fbbf24;
+}
+
+body {
+  font-family: 'Plus Jakarta Sans', 'Noto Sans JP', sans-serif;
+  background-color: #0b0f19;
+  color: #f1f5f9;
+  overflow-x: hidden;
+}
+
+.pixel-font {
+  font-family: 'Press Start 2P', monospace;
+}
+
+/* カスタムスクロールバー */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #38bdf8;
+}
+
+/* キャンバスのスタイリング */
+#gameCanvas {
+  background: linear-gradient(to bottom, #38bdf8 0%, #bae6fd 65%, #86efac 65%, #4ade80 75%, #ca8a04 75%, #a16207 100%);
+  image-rendering: pixelated;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(56, 189, 248, 0.3);
+}
+
+/* アンロックアニメーション */
+@keyframes unlockPulse {
+  0% {
+    transform: scale(0.96);
+    box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.7);
+  }
+  50% {
+    transform: scale(1.02);
+    box-shadow: 0 0 30px 10px rgba(56, 189, 248, 0.4);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(56, 189, 248, 0);
+  }
+}
+
+.unlock-animation {
+  animation: unlockPulse 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ロック状態のスタイル */
+.locked-card {
+  position: relative;
+  filter: grayscale(85%) opacity(0.65);
+  pointer-events: none;
+  user-select: none;
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.locked-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  backdrop-filter: blur(4px);
+  background: rgba(15, 23, 42, 0.65);
+  border-radius: inherit;
+  z-index: 10;
+}
+
+.unlocked-card {
+  position: relative;
+  filter: none;
+  pointer-events: auto;
+  user-select: auto;
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* グロー効果 */
+.neon-border {
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  box-shadow: 0 0 15px rgba(56, 189, 248, 0.15);
+}
+
+.neon-border:hover {
+  border-color: rgba(56, 189, 248, 0.7);
+  box-shadow: 0 0 25px rgba(56, 189, 248, 0.3);
+}
+
+/* ゲームHUD */
+.hud-badge {
+  background: rgba(15, 23, 42, 0.8);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
