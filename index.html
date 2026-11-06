@@ -2,273 +2,1050 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>岸 幸之介 - Flappy Portfolio (11月中旬からラボ常駐したい！)</title>
-  <meta name="description" content="岸 幸之介の自己紹介 × Flappy Birdゲーム。障害物を乗り越えてエッジLLM研究、AWS、趣味などの自己紹介をアンロックしよう！">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>FLAP MY WORLD - 3D自己紹介フライトゲーム</title>
 
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
-
-  <!-- Font Awesome CDN -->
+  <!-- Three.js (r128 固定) CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;800;900&family=Press+Start+2P&display=swap" rel="stylesheet">
+  <!-- Font Awesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
-  <!-- Canvas Confetti CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-
-  <!-- Custom Styles -->
-  <link rel="stylesheet" href="style.css">
+  <style>
+    * {
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      font-family: 'M PLUS Rounded 1c', sans-serif;
+      background: #000;
+      color: #fff;
+    }
+    .pixel-text {
+      font-family: 'Press Start 2P', monospace;
+    }
+    canvas {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+    }
+    /* アニメーション */
+    @keyframes floatUpDown {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-8px); }
+    }
+    .animate-float {
+      animation: floatUpDown 2.8s ease-in-out infinite;
+    }
+    @keyframes glowPulse {
+      0%, 100% { box-shadow: 0 0 15px rgba(56, 189, 248, 0.4); }
+      50% { box-shadow: 0 0 30px rgba(56, 189, 248, 0.8); }
+    }
+    .glow-pulse {
+      animation: glowPulse 2s infinite;
+    }
+  </style>
 </head>
-<body class="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
+<body class="relative w-screen h-screen overflow-hidden">
 
-  <!-- サイトヘッダー -->
-  <header class="border-b border-slate-800 bg-slate-900/70 backdrop-blur-md sticky top-0 z-40">
-    <div class="max-w-7xl mx-auto px-4 py-3 sm:px-6 flex items-center justify-between">
-      <div class="flex items-center space-x-3">
-        <!-- アバターミニサムネイル -->
-        <div class="w-10 h-10 rounded-full overflow-hidden border-2 border-sky-400 shadow-md shadow-sky-500/20 shrink-0">
-          <img src="avatar.jpg" alt="岸 幸之介" class="w-full h-full object-cover">
-        </div>
+  <!-- 3D WebGL Canvas -->
+  <div id="canvas-container" class="absolute inset-0 z-0"></div>
+
+  <!-- UI オーバーレイレイヤー -->
+  <div id="ui-layer" class="absolute inset-0 z-10 pointer-events-none flex flex-col justify-between p-4 sm:p-6">
+
+    <!-- 上部ヘッダーHUD (プレイ中) -->
+    <header id="game-hud" class="w-full flex items-center justify-between transition-opacity duration-300 opacity-0 pointer-events-auto">
+      <div class="flex items-center space-x-3 bg-slate-900/80 backdrop-blur-md px-4 py-2 rounded-2xl border border-slate-700/80 shadow-lg">
+        <span class="text-xl">✈️</span>
         <div>
-          <div class="flex items-center space-x-2">
-            <h1 class="font-extrabold text-base sm:text-lg tracking-tight text-white">
-              岸 幸之介 <span class="text-xs font-normal text-slate-400 font-mono">(キシ コウノスケ)</span>
-            </h1>
-            <span class="hidden sm:inline-block text-[11px] px-2 py-0.5 rounded-full bg-rose-500/15 text-rose-300 border border-rose-500/30 font-bold">
-              🔥 ラボ常駐希望
-            </span>
-          </div>
-          <p class="text-[11px] text-sky-400 font-medium">エッジLLM研究 / クラウド・Web開発</p>
+          <div id="hud-area-name" class="text-xs font-bold text-sky-400 tracking-wider">AREA 1: 趣味</div>
+          <div id="hud-area-keyword" class="text-sm font-extrabold text-white">サッカー</div>
         </div>
+      </div>
+
+      <!-- 進捗インジケーター -->
+      <div class="flex items-center space-x-2 bg-slate-900/80 backdrop-blur-md px-3 py-2 rounded-2xl border border-slate-700/80">
+        <div id="step-dot-1" class="w-3 h-3 rounded-full bg-slate-600 transition-colors"></div>
+        <div class="w-4 h-0.5 bg-slate-700"></div>
+        <div id="step-dot-2" class="w-3 h-3 rounded-full bg-slate-600 transition-colors"></div>
+        <div class="w-4 h-0.5 bg-slate-700"></div>
+        <div id="step-dot-3" class="w-3 h-3 rounded-full bg-slate-600 transition-colors"></div>
+      </div>
+    </header>
+
+    <!-- 画面中央：ゲート通過時の一言メッセージバナー -->
+    <div id="message-banner" class="self-center max-w-lg w-full bg-slate-900/95 backdrop-blur-xl border-2 border-amber-400 p-5 rounded-3xl shadow-2xl text-center transform scale-90 opacity-0 transition-all duration-500 pointer-events-none">
+      <div id="banner-category" class="text-xs font-extrabold text-amber-300 uppercase tracking-widest mb-1">UNLOCKED STORY</div>
+      <div id="banner-title" class="text-xl sm:text-2xl font-black text-white mb-2"></div>
+      <p id="banner-desc" class="text-sm sm:text-base text-slate-200 leading-relaxed font-medium"></p>
+    </div>
+
+    <!-- 衝突時のクイック復帰通知 -->
+    <div id="crash-toast" class="self-center bg-rose-950/90 border border-rose-500/80 text-rose-200 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold opacity-0 transition-opacity duration-200 pointer-events-none">
+      ⚡ ぶつかった！このエリアの入口からすぐ再開します
+    </div>
+
+    <!-- 下部操作ガイド (プレイ中) -->
+    <footer id="game-controls-guide" class="text-center text-xs text-white/70 transition-opacity duration-300 opacity-0">
+      タップ / クリック / [Space] キーで上昇 ✈️
+    </footer>
+  </div>
+
+  <!-- タイトル画面モーダル -->
+  <div id="title-screen" class="absolute inset-0 z-20 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm transition-opacity duration-500">
+    <div class="max-w-md w-full bg-slate-900/90 border border-slate-700/80 rounded-3xl p-6 sm:p-8 text-center shadow-2xl relative overflow-hidden">
+      <!-- 背景グロー装飾 -->
+      <div class="absolute -top-16 -left-16 w-36 h-36 bg-sky-500/20 rounded-full blur-2xl"></div>
+      <div class="absolute -bottom-16 -right-16 w-36 h-36 bg-amber-500/20 rounded-full blur-2xl"></div>
+
+      <!-- タイトルアイコン -->
+      <div class="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-tr from-sky-400 to-indigo-500 rounded-3xl shadow-xl shadow-sky-500/30 text-4xl mb-4 animate-float">
+        ✈️
+      </div>
+
+      <h1 class="text-3xl sm:text-4xl font-black tracking-tight text-white mb-1">
+        FLAP MY WORLD
+      </h1>
+      <p class="text-xs sm:text-sm text-sky-400 font-bold mb-4 font-mono">
+        3D INTERACTIVE PORTFOLIO
+      </p>
+
+      <div class="bg-slate-800/60 rounded-2xl p-4 border border-slate-700/60 mb-6 text-left">
+        <div class="flex items-center space-x-3 mb-2">
+          <div class="w-8 h-8 rounded-full bg-sky-400/20 flex items-center justify-center text-sky-300 text-sm">
+            <i class="fas fa-paper-plane"></i>
+          </div>
+          <div>
+            <div id="title-author-name" class="font-extrabold text-white text-base"></div>
+            <div id="title-author-tagline" class="text-xs text-slate-400 font-medium"></div>
+          </div>
+        </div>
+        <p class="text-xs sm:text-sm text-slate-300 leading-relaxed font-medium">
+          「私のこと、飛びながら知ってみない？」<br>
+          ワンタップで紙飛行機を操縦し、3つのエリアのゲートをくぐって私の世界を巡りましょう！
+        </p>
       </div>
 
       <!-- アクションボタン -->
-      <div class="flex items-center space-x-2 sm:space-x-3">
-        <!-- 全解放スイッチ -->
-        <label class="hidden sm:flex items-center space-x-2 text-xs bg-slate-800/80 hover:bg-slate-800 px-3 py-1.5 rounded-full border border-slate-700 cursor-pointer transition">
-          <input type="checkbox" id="unlockAllToggle" class="sr-only peer">
-          <div class="w-7 h-4 bg-slate-600 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-sky-500"></div>
-          <span class="text-slate-300 peer-checked:text-sky-300 font-medium">全セクションを即時表示</span>
-        </label>
-
-        <!-- サウンド切り替え -->
-        <button id="muteToggleBtn" class="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-sm border border-slate-700 transition" title="サウンド切り替え">
-          <i class="fas fa-volume-up text-sky-400"></i>
+      <div class="space-y-3">
+        <button id="btn-start-flight" class="w-full py-4 px-6 bg-gradient-to-r from-sky-400 via-teal-400 to-emerald-400 hover:from-sky-300 hover:to-emerald-300 text-slate-950 font-black rounded-2xl text-base sm:text-lg shadow-xl shadow-sky-400/20 active:scale-95 transition-all flex items-center justify-center space-x-2">
+          <span>飛び立つ！ (GAME START)</span>
+          <i class="fas fa-arrow-right"></i>
         </button>
 
-        <!-- X (Twitter) シェア -->
-        <button id="shareOnXBtn" class="flex items-center space-x-1.5 text-xs font-semibold px-3 py-2 bg-slate-800 hover:bg-slate-700 text-sky-400 rounded-xl border border-slate-700 transition">
-          <i class="fab fa-x-twitter"></i>
-          <span class="hidden md:inline">シェア</span>
+        <button id="btn-view-profile-direct" class="w-full py-3 px-6 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-bold rounded-2xl text-sm border border-slate-700 active:scale-95 transition-all flex items-center justify-center space-x-2">
+          <i class="fas fa-id-card text-sky-400"></i>
+          <span>ゲームをせずにプロフィールを読む</span>
         </button>
       </div>
+
+      <p class="text-[11px] text-slate-500 mt-4">
+        1プレイ 約30〜45秒 / ぶつかってもすぐその場で再開できます
+      </p>
     </div>
-  </header>
-
-  <!-- メインコンテンツ -->
-  <main class="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-6 md:py-8">
-    
-    <!-- モバイル用全解放トグル -->
-    <div class="sm:hidden mb-4 p-2.5 bg-slate-900 rounded-xl border border-slate-800 flex items-center justify-between">
-      <span class="text-xs text-slate-300">ゲームなしで全プロフィールを見る</span>
-      <label class="flex items-center space-x-2 text-xs cursor-pointer">
-        <input type="checkbox" id="unlockAllToggleMobile" onchange="document.getElementById('unlockAllToggle').checked = this.checked; document.getElementById('unlockAllToggle').dispatchEvent(new Event('change'));" class="sr-only peer">
-        <div class="w-7 h-4 bg-slate-600 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-sky-500"></div>
-      </label>
-    </div>
-
-    <!-- 2カラムレイアウト: 左=ゲーム / 右=自己紹介ポートフォリオ -->
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-      
-      <!-- 左カラム: ゲームステーション (LG: 5カラム) -->
-      <section class="lg:col-span-5 flex flex-col items-center lg:sticky lg:top-20">
-        
-        <!-- ゲームコンテナ枠 -->
-        <div class="relative bg-slate-900 p-3 sm:p-4 rounded-3xl border border-slate-800 shadow-2xl w-full max-w-[390px]">
-          
-          <!-- ゲーム上部HUD (スコア・ハイスコア) -->
-          <div class="flex items-center justify-between mb-3 px-2">
-            <div class="hud-badge px-3 py-1.5 rounded-xl flex items-center space-x-2">
-              <span class="text-[10px] text-slate-400 font-mono">SCORE</span>
-              <span id="currentScoreDisplay" class="pixel-font text-lg text-white font-bold">0</span>
-            </div>
-            <div class="hud-badge px-3 py-1.5 rounded-xl flex items-center space-x-2">
-              <span class="text-[10px] text-amber-400 font-mono"><i class="fas fa-trophy mr-1"></i>BEST</span>
-              <span id="highScoreDisplay" class="pixel-font text-base text-amber-400 font-bold">0</span>
-            </div>
-          </div>
-
-          <!-- HTML5 Canvas ゲーム画面 -->
-          <div class="relative rounded-2xl overflow-hidden border-2 border-slate-700/60 bg-sky-950 flex justify-center">
-            <canvas id="gameCanvas" class="w-full max-w-[360px] h-[480px] sm:h-[500px] block cursor-pointer"></canvas>
-          </div>
-
-          <!-- ゲーム下部コントロール & 操作ヒント -->
-          <div class="mt-3 flex items-center justify-between px-1">
-            <div class="flex items-center text-xs text-slate-400 space-x-1.5">
-              <span class="px-2 py-0.5 bg-slate-800 rounded font-mono text-[11px] border border-slate-700">Space</span>
-              <span>またはタップでヒヨコが飛ぶ！</span>
-            </div>
-            <button id="restartBtn" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white px-2.5 py-1 rounded-lg border border-slate-700 transition flex items-center">
-              <i class="fas fa-rotate-right mr-1 text-slate-400"></i> リセット
-            </button>
-          </div>
-        </div>
-
-        <!-- 解放進捗ミニガイド -->
-        <div class="w-full max-w-[390px] mt-4 p-4 bg-slate-900/60 rounded-2xl border border-slate-800/80">
-          <div class="flex items-center justify-between text-xs mb-2">
-            <span class="font-bold text-slate-300 flex items-center">
-              <i class="fas fa-rocket text-amber-400 mr-1.5"></i> ラボ常駐への進捗
-            </span>
-            <span id="unlockProgressText" class="text-slate-400 font-mono text-[11px]">0% アンロック</span>
-          </div>
-          <!-- プログレスバー -->
-          <div class="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden mb-3">
-            <div id="unlockProgressBar" class="h-full bg-gradient-to-r from-sky-400 via-teal-400 to-emerald-400 w-0 transition-all duration-500 rounded-full"></div>
-          </div>
-          <div class="grid grid-cols-3 gap-1.5 text-[10px] text-slate-400 text-center font-mono">
-            <div class="p-1 bg-slate-800/40 rounded border border-slate-800">1pt: 目標</div>
-            <div class="p-1 bg-slate-800/40 rounded border border-slate-800">3pt: 技術/研究</div>
-            <div class="p-1 bg-slate-800/40 rounded border border-slate-800">6pt: 活動</div>
-            <div class="p-1 bg-slate-800/40 rounded border border-slate-800">9pt: 趣味</div>
-            <div class="p-1 bg-slate-800/40 rounded border border-slate-800">12pt: ラボ意気込み</div>
-            <div class="p-1 bg-slate-800/40 rounded border border-slate-800 text-emerald-400 font-bold">15pt: 常駐確定🎉</div>
-          </div>
-        </div>
-
-      </section>
-
-      <!-- 右カラム: 自己紹介カード群 (LG: 7カラム) -->
-      <section class="lg:col-span-7 space-y-6">
-
-        <!-- プロフィールヘッダーカード (スライドデザイン完全再現 & 強化) -->
-        <div class="bg-gradient-to-br from-slate-900 via-slate-900 to-sky-950/40 p-6 rounded-3xl border border-slate-800 shadow-2xl relative overflow-hidden">
-          <div class="absolute -right-8 -top-8 w-44 h-44 bg-sky-500/10 rounded-full blur-3xl pointer-events-none"></div>
-
-          <div class="flex flex-col sm:flex-row items-center sm:items-start space-y-4 sm:space-y-0 sm:space-x-6">
-            <!-- 写真アイコン (水色リング・肩のヒヨコがポイント) -->
-            <div class="relative shrink-0">
-              <div class="w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden border-4 border-sky-400 shadow-xl shadow-sky-500/30">
-                <img src="avatar.jpg" alt="岸 幸之介" class="w-full h-full object-cover">
-              </div>
-              <div class="absolute -bottom-1 -right-1 bg-amber-400 text-slate-950 font-bold text-[11px] px-2 py-0.5 rounded-full shadow border-2 border-slate-900 flex items-center">
-                🐥 相棒
-              </div>
-            </div>
-
-            <!-- 名前 & キャッチコピー -->
-            <div class="flex-1 text-center sm:text-left">
-              <div class="flex flex-col sm:flex-row sm:items-baseline space-y-1 sm:space-y-0 sm:space-x-3 mb-2">
-                <h2 id="profileHeaderName" class="text-2xl sm:text-3xl font-extrabold text-white tracking-wide"></h2>
-                <span id="profileHeaderKana" class="text-sm font-medium text-slate-400 font-mono"></span>
-              </div>
-
-              <!-- スライドのメインスローガン -->
-              <div class="inline-block my-2 px-4 py-2 bg-gradient-to-r from-rose-500/20 via-amber-500/20 to-sky-500/20 border border-rose-500/40 rounded-2xl">
-                <span id="profileHeaderTagline" class="text-base sm:text-lg font-black tracking-wide bg-gradient-to-r from-white via-amber-200 to-rose-200 bg-clip-text text-transparent"></span>
-              </div>
-
-              <p id="profileHeaderTitle" class="text-xs sm:text-sm font-semibold text-sky-400 mt-1"></p>
-            </div>
-          </div>
-        </div>
-
-        <!-- 1. 目標・宣言 (スコア1で解放) -->
-        <div id="section-target" class="locked-card bg-slate-900/90 p-6 rounded-3xl border border-slate-800 relative transition-all duration-300">
-          <div class="flex items-center justify-between mb-4">
-            <h3 class="font-bold text-lg text-white flex items-center">
-              <i class="fas fa-bullseye text-rose-400 mr-2.5"></i> Mission / 目標
-            </h3>
-            <span class="lock-badge text-xs px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 font-medium">
-              <i class="fas fa-lock mr-1.5"></i> スコア 1 でアンロック
-            </span>
-          </div>
-          <div id="content-target" class="card-content opacity-20 blur-[2px] transition-all duration-300"></div>
-        </div>
-
-        <!-- 2. 技術 & エッジLLM研究 (スコア3で解放) -->
-        <div id="section-tech" class="locked-card bg-slate-900/90 p-6 rounded-3xl border border-slate-800 relative transition-all duration-300">
-          <div class="flex items-center justify-between mb-4">
-            <h3 class="font-bold text-lg text-white flex items-center">
-              <i class="fas fa-microchip text-sky-400 mr-2.5"></i> Tech & Research / 技術と研究内容
-            </h3>
-            <span class="lock-badge text-xs px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 font-medium">
-              <i class="fas fa-lock mr-1.5"></i> スコア 3 でアンロック
-            </span>
-          </div>
-          <div id="content-tech" class="card-content opacity-20 blur-[2px] transition-all duration-300"></div>
-        </div>
-
-        <!-- 3. 活動実績 (スコア6で解放) -->
-        <div id="section-activity" class="locked-card bg-slate-900/90 p-6 rounded-3xl border border-slate-800 relative transition-all duration-300">
-          <div class="flex items-center justify-between mb-4">
-            <h3 class="font-bold text-lg text-white flex items-center">
-              <i class="fas fa-briefcase text-emerald-400 mr-2.5"></i> Activities & Experience / 活動
-            </h3>
-            <span class="lock-badge text-xs px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 font-medium">
-              <i class="fas fa-lock mr-1.5"></i> スコア 6 でアンロック
-            </span>
-          </div>
-          <div id="content-activity" class="card-content opacity-20 blur-[2px] transition-all duration-300"></div>
-        </div>
-
-        <!-- 4. 趣味・カルチャー (スコア9で解放) -->
-        <div id="section-hobbies" class="locked-card bg-slate-900/90 p-6 rounded-3xl border border-slate-800 relative transition-all duration-300">
-          <div class="flex items-center justify-between mb-4">
-            <h3 class="font-bold text-lg text-white flex items-center">
-              <i class="fas fa-heart text-rose-400 mr-2.5"></i> Hobbies & Culture / 趣味
-            </h3>
-            <span class="lock-badge text-xs px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 font-medium">
-              <i class="fas fa-lock mr-1.5"></i> スコア 9 でアンロック
-            </span>
-          </div>
-          <div id="content-hobbies" class="card-content opacity-20 blur-[2px] transition-all duration-300"></div>
-        </div>
-
-        <!-- 5. ラボ常駐への意気込み (スコア12で解放) -->
-        <div id="section-labGoal" class="locked-card bg-slate-900/90 p-6 rounded-3xl border border-slate-800 relative transition-all duration-300">
-          <div class="flex items-center justify-between mb-4">
-            <h3 class="font-bold text-lg text-white flex items-center">
-              <i class="fas fa-flask-vial text-indigo-400 mr-2.5"></i> Commitment / ラボで実現したいこと
-            </h3>
-            <span class="lock-badge text-xs px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 font-medium">
-              <i class="fas fa-lock mr-1.5"></i> スコア 12 でアンロック
-            </span>
-          </div>
-          <div id="content-labGoal" class="card-content opacity-20 blur-[2px] transition-all duration-300"></div>
-        </div>
-
-        <!-- 6. お問い合わせ・常駐オファー (スコア15で解放) -->
-        <div id="section-contact" class="locked-card bg-slate-900/90 p-6 rounded-3xl border border-slate-800 relative transition-all duration-300">
-          <div class="flex items-center justify-between mb-4">
-            <h3 class="font-bold text-lg text-white flex items-center">
-              <i class="fas fa-handshake text-emerald-400 mr-2.5"></i> Connect / ラボ常駐面談・お問い合わせ
-            </h3>
-            <span class="lock-badge text-xs px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 font-medium">
-              <i class="fas fa-lock mr-1.5"></i> スコア 15 で完全解放
-            </span>
-          </div>
-          <div id="content-contact" class="card-content opacity-20 blur-[2px] transition-all duration-300"></div>
-        </div>
-
-      </section>
-
-    </div>
-  </main>
-
-  <!-- トースト通知 -->
-  <div id="gameToast" class="fixed bottom-6 right-6 z-50 bg-slate-900/95 text-white px-5 py-3 rounded-2xl border border-sky-400/50 shadow-2xl shadow-sky-500/20 text-sm font-semibold transition-all duration-300 opacity-0 translate-y-4 pointer-events-none">
-    🎉 アンロックされました！
   </div>
 
-  <!-- フッター -->
-  <footer class="border-t border-slate-800/80 bg-slate-900/40 py-6 mt-12 text-center text-xs text-slate-500">
-    <p>岸 幸之介 × Flappy Portfolio &copy; 2026</p>
-    <p class="mt-1">障害物（メモリ制約・レイテンシ・AWSコスト）を越えて、11月中旬ラボ常駐へ！🔥</p>
-  </footer>
+  <!-- クリア & プロフィール閲覧モーダル -->
+  <div id="profile-modal" class="absolute inset-0 z-30 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md hidden opacity-0 transition-opacity duration-500">
+    <div class="max-w-xl w-full bg-slate-900 border border-slate-700/80 rounded-3xl p-6 sm:p-8 text-center shadow-2xl relative max-h-[90vh] overflow-y-auto">
+      
+      <!-- クラッカーバッジ -->
+      <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-amber-400/20 text-amber-300 text-xs font-black uppercase tracking-wider mb-3 border border-amber-400/40">
+        <span>🎉 FLIGHT COMPLETED!</span>
+      </div>
 
-  <!-- Scripts -->
-  <script src="data.js"></script>
-  <script src="game.js"></script>
+      <h2 class="text-2xl sm:text-3xl font-black text-white mb-1">
+        飛んで見つけた私のプロフィール
+      </h2>
+      <p id="profile-modal-tagline" class="text-xs sm:text-sm text-sky-400 font-bold mb-6"></p>
+
+      <!-- 集めた3つの言葉カード一覧 -->
+      <div id="profile-cards-container" class="space-y-4 mb-6 text-left">
+        <!-- JSで動的生成 -->
+      </div>
+
+      <!-- 操作ボタン -->
+      <div class="flex flex-col sm:flex-row gap-3">
+        <button id="btn-replay-game" class="flex-1 py-3 px-5 bg-gradient-to-r from-sky-400 to-emerald-400 hover:from-sky-300 hover:to-emerald-300 text-slate-950 font-black rounded-xl text-sm shadow-lg shadow-sky-400/20 active:scale-95 transition-all flex items-center justify-center space-x-2">
+          <i class="fas fa-rotate-right"></i>
+          <span>もう一度飛ぶ</span>
+        </button>
+
+        <button id="btn-share-x" class="flex-1 py-3 px-5 bg-slate-800 hover:bg-slate-700 text-sky-400 font-bold rounded-xl text-sm border border-slate-700 active:scale-95 transition-all flex items-center justify-center space-x-2">
+          <i class="fab fa-x-twitter"></i>
+          <span>フライト結果をシェア</span>
+        </button>
+      </div>
+
+      <button id="btn-close-profile" class="mt-4 text-xs text-slate-400 hover:text-white underline">
+        閉じる
+      </button>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- JavaScript: PROFILE 設定 & 3D ゲーム実装 -->
+  <!-- ========================================== -->
+  <script>
+    /**
+     * ========================================================
+     * 🌸 生徒・制作者向けカスタマイズ設定 (PROFILE)
+     * ここを書き換えるだけで、自分の世界に簡単に変更できます！
+     * ========================================================
+     */
+    const PROFILE = {
+      // あなたの名前・キャッチコピー
+      name: "岸 幸之介",
+      nameKana: "キシ コウノスケ",
+      tagline: "エッジLLM研究 × クラウド開発 (11月中旬からラボ常駐したい！🔥)",
+      intro: "こんにちは！紙飛行機に乗って、私の世界を巡るフライトへようこそ。",
+
+      // 3つのエリア（コース）の設定
+      areas: [
+        {
+          id: "hobby",
+          title: "Area 1: 趣味",
+          keyword: "サッカー ⚽",
+          message: "ピッチを駆け回るのが大好き！サッカーで培った持久力・瞬発力と、チームで勝利を目指す姿勢が私の強みです。",
+          // テーマカラー (16進数)
+          skyColor: 0x0284c7,     // スタジアムの晴れ渡る青空
+          fogColor: 0x064e3b,     // 深い芝の霧
+          groundColor: 0x047857,  // サッカーピッチの緑
+          accentColor: 0x34d399,  // 光るゴールゲートのネオン
+          obstacleType: "soccer"  // サッカーボール & コーン
+        },
+        {
+          id: "current",
+          title: "Area 2: いま取り組んでいること",
+          keyword: "小さなコンピュータでAIを動かす 🔬",
+          message: "研究テーマはエッジLLM！限られたメモリや省電力チップの上でもサクサク動くAIモデルの軽量化・量子化に没頭しています。",
+          skyColor: 0x0f172a,     // サイバーダーク
+          fogColor: 0x0c4a6e,     // 電子回路の光
+          groundColor: 0x022c22,  // 巨大なプリント基板（PCB）
+          accentColor: 0x38bdf8,  // ネオンシアンの回路
+          obstacleType: "chip"    // 電子チップ & メモリブロック
+        },
+        {
+          id: "dream",
+          title: "Area 3: 将来の夢",
+          keyword: "AIを使ったサービスを支える ☁️",
+          message: "強固なクラウドインフラとAIの力で、世界中の人々の日常をワクワクさせ、安心を支える仕組みをつくりたい！",
+          skyColor: 0x020617,     // 深夜の空
+          fogColor: 0x2e1065,     // 紫のサイバーネオン
+          groundColor: 0x1e1b4b,  // 光のハイウェイ
+          accentColor: 0xa855f7,  // 黄金・紫のサーバータワー
+          obstacleType: "cloud"   // サーバータワー & クラウドキューブ
+        }
+      ]
+    };
+
+    /**
+     * ========================================================
+     * 🎮 FLAP MY WORLD - 3D Engine & Game Logic (Three.js)
+     * ========================================================
+     */
+    class FlapMyWorldGame {
+      constructor() {
+        this.container = document.getElementById('canvas-container');
+        this.state = 'TITLE'; // 'TITLE' | 'PLAYING' | 'SLOWMO' | 'CLEAR'
+        
+        // コース設計パラメータ
+        this.areaLength = 130; // 1エリアあたりの距離
+        this.totalAreas = PROFILE.areas.length; // 3エリア
+        this.courseLength = this.areaLength * this.totalAreas; // 全長 390
+        
+        // 飛行速度 & 物理
+        this.baseSpeed = 16.5; // 前進速度 (1プレイ 約30〜35秒)
+        this.speed = this.baseSpeed;
+        this.gravity = -24;
+        this.jumpForce = 8.8;
+        this.velocity = { y: 0 };
+        this.planeYMin = 0.8;
+        this.planeYMax = 14.5;
+        
+        // 進行度トラッカー
+        this.currentAreaIndex = 0;
+        this.unlockedMessages = []; // 解放したメッセージ一覧
+        this.isInvincible = false;  // 衝突直後の無敵時間
+        
+        // Three.js コア
+        this.scene = null;
+        this.camera = null;
+        this.renderer = null;
+        this.clock = new THREE.Clock();
+
+        // 3D オブジェクト群
+        this.plane = null;
+        this.planeWingsTrail = [];
+        this.obstacles = [];
+        this.gates = [];
+        this.areaBuildings = []; // エリア3のサーバー都市ビル群
+        
+        this.init();
+      }
+
+      init() {
+        this.setupRenderer();
+        this.setupSceneAndCamera();
+        this.setupLights();
+        this.createPaperPlane();
+        this.buildWorld();
+        this.setupEventListeners();
+        this.updateProfileUI();
+
+        // アニメーションループ開始
+        this.animate = this.animate.bind(this);
+        requestAnimationFrame(this.animate);
+      }
+
+      // レンダラー設定
+      setupRenderer() {
+        this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+        this.renderer.setSize(window.innerWidth, window.innerHeight);
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        this.renderer.toneMappingExposure = 1.1;
+        this.container.appendChild(this.renderer.domElement);
+      }
+
+      // シーン & カメラ設定 (横から少し見下ろす絶妙なクォータービュー)
+      setupSceneAndCamera() {
+        this.scene = new THREE.Scene();
+        const firstArea = PROFILE.areas[0];
+        this.scene.background = new THREE.Color(firstArea.skyColor);
+        this.scene.fog = new THREE.FogExp2(firstArea.fogColor, 0.018);
+
+        this.camera = new THREE.PerspectiveCamera(
+          55,
+          window.innerWidth / window.innerHeight,
+          0.1,
+          400
+        );
+        // カメラ位置: X前進軸に対し、少し後方(X-8)、上方(Y+3.5)、手前(Z+14)
+        this.camera.position.set(-8, 8, 14);
+      }
+
+      // ライティング設定
+      setupLights() {
+        this.ambientLight = new THREE.AmbientLight(0xffffff, 0.65);
+        this.scene.add(this.ambientLight);
+
+        this.dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
+        this.dirLight.position.set(20, 40, 25);
+        this.scene.add(this.dirLight);
+
+        // 飛行機を照らすポイントライト
+        this.planeLight = new THREE.PointLight(0x38bdf8, 1.5, 18);
+        this.scene.add(this.planeLight);
+      }
+
+      // 3D紙飛行機の作成 (Three.jsの基本ジオメトリでシャープに折り紙を表現)
+      createPaperPlane() {
+        this.planeGroup = new THREE.Group();
+
+        // 紙飛行機ジオメトリ (左右対称の折り紙形状)
+        const planeGeo = new THREE.BufferGeometry();
+        const vertices = new Float32Array([
+          // 上面・右翼
+          0.0, 0.0, 1.6,     // 機首 (先端)
+          -1.1, 0.25, -1.2,  // 右翼端
+          0.0, 0.35, -1.0,   // 中央折り目
+
+          // 上面・左翼
+          0.0, 0.0, 1.6,     // 機首
+          0.0, 0.35, -1.0,   // 中央折り目
+          1.1, 0.25, -1.2,   // 左翼端
+
+          // 下部・胴体右
+          0.0, 0.0, 1.6,
+          0.0, -0.4, -0.9,   // 下端キール
+          -1.1, 0.25, -1.2,
+
+          // 下部・胴体左
+          0.0, 0.0, 1.6,
+          1.1, 0.25, -1.2,
+          0.0, -0.4, -0.9
+        ]);
+
+        planeGeo.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+        planeGeo.computeVertexNormals();
+
+        // 白い光沢紙マテリアル (裏表描画)
+        const planeMat = new THREE.MeshStandardMaterial({
+          color: 0xffffff,
+          roughness: 0.2,
+          metalness: 0.1,
+          side: THREE.DoubleSide
+        });
+
+        this.planeMesh = new THREE.Mesh(planeGeo, planeMat);
+        // 飛行方向(X軸方向)へ頭を向ける
+        this.planeMesh.rotation.y = -Math.PI / 2;
+        this.planeMesh.scale.set(0.9, 0.9, 0.9);
+        this.planeGroup.add(this.planeMesh);
+
+        // 紙飛行機の縁を飾るネオンライン
+        const edgeGeo = new THREE.EdgesGeometry(planeGeo);
+        const edgeMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, linewidth: 2 });
+        const edges = new THREE.LineSegments(edgeGeo, edgeMat);
+        this.planeMesh.add(edges);
+
+        // 飛行機の初期位置
+        this.planeGroup.position.set(0, 6, 0);
+        this.scene.add(this.planeGroup);
+        this.plane = this.planeGroup;
+      }
+
+      // コース（地面・障害物・ゲート・背景装飾）の生成
+      buildWorld() {
+        // 1. 各エリアごとの地面 (巨大なストリップ)
+        PROFILE.areas.forEach((area, index) => {
+          const startX = index * this.areaLength;
+          const groundGeo = new THREE.PlaneGeometry(this.areaLength, 40, 16, 8);
+          const groundMat = new THREE.MeshStandardMaterial({
+            color: area.groundColor,
+            roughness: 0.7,
+            metalness: 0.1
+          });
+          const ground = new THREE.Mesh(groundGeo, groundMat);
+          ground.rotation.x = -Math.PI / 2;
+          ground.position.set(startX + this.areaLength / 2, 0, 0);
+          this.scene.add(ground);
+
+          // エリア別のコース装飾 & 障害物を配置
+          this.populateArea(index, area, startX);
+        });
+
+        // 2. コース全体を走る光のサイドガイドライン
+        const lineGeo = new THREE.BufferGeometry().setFromPoints([
+          new THREE.Vector3(0, 0.1, -10),
+          new THREE.Vector3(this.courseLength + 40, 0.1, -10)
+        ]);
+        const lineMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, linewidth: 2 });
+        this.scene.add(new THREE.Line(lineGeo, lineMat));
+
+        const lineGeo2 = new THREE.BufferGeometry().setFromPoints([
+          new THREE.Vector3(0, 0.1, 10),
+          new THREE.Vector3(this.courseLength + 40, 0.1, 10)
+        ]);
+        this.scene.add(new THREE.Line(lineGeo2, lineMat));
+      }
+
+      // エリアごとの装飾 & 障害物 & ゲートの配置
+      populateArea(index, area, startX) {
+        // A. エリアの入口/境界ゲート (クリア目標)
+        // 最初のゲートは広めに、後半は少し刺激的に
+        const gateX = startX + this.areaLength - 10;
+        const gateWidth = index === 0 ? 9.5 : (index === 1 ? 8.5 : 8.0);
+        const gateHeight = index === 0 ? 8.0 : 7.0;
+        const gateCenterY = 6.5;
+
+        this.createGate(gateX, gateCenterY, gateWidth, gateHeight, area, index);
+
+        // B. エリア内の障害物と背景装飾
+        const obstacleCount = 6; // 1エリアあたり6箇所の障害物ポイント
+        const spacing = (this.areaLength - 30) / obstacleCount;
+
+        for (let i = 0; i < obstacleCount; i++) {
+          const obsX = startX + 18 + i * spacing;
+          
+          if (area.obstacleType === 'soccer') {
+            // エリア1: サッカー
+            this.buildSoccerObstacle(obsX, i);
+          } else if (area.obstacleType === 'chip') {
+            // エリア2: エッジLLM研究（電子回路・チップ）
+            this.buildChipObstacle(obsX, i);
+          } else if (area.obstacleType === 'cloud') {
+            // エリア3: 将来の夢（サーバー都市・クラウド）
+            this.buildCloudObstacle(obsX, i);
+          }
+        }
+      }
+
+      // ゲート（通過目標）の作成
+      createGate(x, centerY, width, height, area, areaIndex) {
+        const gateGroup = new THREE.Group();
+        gateGroup.position.set(x, centerY, 0);
+
+        // 光るフレーム (四角いネオン枠)
+        const frameMat = new THREE.MeshStandardMaterial({
+          color: area.accentColor,
+          emissive: area.accentColor,
+          emissiveIntensity: 0.8,
+          roughness: 0.3
+        });
+
+        const thickness = 0.5;
+        // 上枠
+        const topBar = new THREE.Mesh(new THREE.BoxGeometry(thickness, thickness, width), frameMat);
+        topBar.position.set(0, height / 2, 0);
+        gateGroup.add(topBar);
+
+        // 下枠
+        const bottomBar = new THREE.Mesh(new THREE.BoxGeometry(thickness, thickness, width), frameMat);
+        bottomBar.position.set(0, -height / 2, 0);
+        gateGroup.add(bottomBar);
+
+        // 左柱
+        const leftPost = new THREE.Mesh(new THREE.BoxGeometry(thickness, height, thickness), frameMat);
+        leftPost.position.set(0, 0, -width / 2);
+        gateGroup.add(leftPost);
+
+        // 右柱
+        const rightPost = new THREE.Mesh(new THREE.BoxGeometry(thickness, height, thickness), frameMat);
+        rightPost.position.set(0, 0, width / 2);
+        gateGroup.add(rightPost);
+
+        // 中央の半透明エネルギーシールド (くぐる部分)
+        const shieldGeo = new THREE.PlaneGeometry(width, height);
+        const shieldMat = new THREE.MeshBasicMaterial({
+          color: area.accentColor,
+          transparent: true,
+          opacity: 0.25,
+          side: THREE.DoubleSide
+        });
+        const shield = new THREE.Mesh(shieldGeo, shieldMat);
+        shield.rotation.y = Math.PI / 2;
+        gateGroup.add(shield);
+
+        this.scene.add(gateGroup);
+
+        // ゲート情報登録
+        this.gates.push({
+          x: x,
+          centerY: centerY,
+          halfHeight: height / 2,
+          halfWidth: width / 2,
+          areaIndex: areaIndex,
+          passed: false,
+          group: gateGroup
+        });
+      }
+
+      // エリア1障害物: サッカーボール & コーン & スタジアム照明
+      buildSoccerObstacle(x, seq) {
+        // 上下どちらかに巨大サッカーボール、反対側にコーン
+        const isUpper = seq % 2 === 0;
+        const ballY = isUpper ? 10.5 : 2.8;
+
+        // 浮遊サッカーボール (白球に黒五角形風のテクスチャを凹凸で表現)
+        const ballGeo = new THREE.SphereGeometry(1.6, 16, 16);
+        const ballMat = new THREE.MeshStandardMaterial({
+          color: 0xf8fafc,
+          roughness: 0.4
+        });
+        const ball = new THREE.Mesh(ballGeo, ballMat);
+        ball.position.set(x, ballY, 0);
+        this.scene.add(ball);
+
+        // 衝突判定に登録 (球体)
+        this.obstacles.push({
+          type: 'sphere',
+          mesh: ball,
+          x: x,
+          y: ballY,
+          radius: 1.5,
+          areaIndex: 0
+        });
+
+        // 背景装飾: スタジアムの照明塔
+        const towerGeo = new THREE.CylinderGeometry(0.2, 0.4, 16, 8);
+        const towerMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8 });
+        const tower = new THREE.Mesh(towerGeo, towerMat);
+        tower.position.set(x + 2, 8, -12);
+        this.scene.add(tower);
+
+        // 照明ヘッド
+        const lightHead = new THREE.Mesh(
+          new THREE.BoxGeometry(2, 1, 1),
+          new THREE.MeshBasicMaterial({ color: 0xfef08a })
+        );
+        lightHead.position.set(x + 2, 16, -12);
+        this.scene.add(lightHead);
+      }
+
+      // エリア2障害物: 電子チップ (IC Chip) & メモリブロック
+      buildChipObstacle(x, seq) {
+        const gapY = 5.5 + (seq % 3) * 1.5; // 通過できる安全な高さ
+        const chipGap = 5.5; // チップ間の隙間 (通りやすい広さ)
+
+        // 上のチップ
+        const topH = 12;
+        const topY = gapY + chipGap / 2 + topH / 2;
+        const chipGeo = new THREE.BoxGeometry(2.2, topH, 5);
+        const chipMat = new THREE.MeshStandardMaterial({
+          color: 0x0f172a,
+          emissive: 0x0369a1,
+          emissiveIntensity: 0.4,
+          roughness: 0.2
+        });
+        const topChip = new THREE.Mesh(chipGeo, chipMat);
+        topChip.position.set(x, topY, 0);
+        this.scene.add(topChip);
+
+        // 下のチップ
+        const bottomH = 10;
+        const bottomY = gapY - chipGap / 2 - bottomH / 2;
+        const bottomChip = new THREE.Mesh(new THREE.BoxGeometry(2.2, bottomH, 5), chipMat);
+        bottomChip.position.set(x, bottomY, 0);
+        this.scene.add(bottomChip);
+
+        // 衝突判定登録 (AABB)
+        this.obstacles.push({
+          type: 'box',
+          xMin: x - 1.1,
+          xMax: x + 1.1,
+          yMin: topY - topH / 2,
+          yMax: topY + topH / 2,
+          areaIndex: 1
+        });
+        this.obstacles.push({
+          type: 'box',
+          xMin: x - 1.1,
+          xMax: x + 1.1,
+          yMin: bottomY - bottomH / 2,
+          yMax: bottomY + bottomH / 2,
+          areaIndex: 1
+        });
+
+        // 背景装飾: 光る回路ライン
+        const circuitGeo = new THREE.BoxGeometry(spacing => 10, 0.1, 0.4);
+        const circuitMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
+        const circuit = new THREE.Mesh(circuitGeo, circuitMat);
+        circuit.position.set(x, 0.05, (seq % 2 === 0 ? -6 : 6));
+        this.scene.add(circuit);
+      }
+
+      // エリア3障害物: サーバービル & クラウドデータキューブ
+      buildCloudObstacle(x, seq) {
+        const isUpper = seq % 2 === 1;
+        const cubeY = isUpper ? 9.5 : 3.5;
+        const cubeSize = 2.4;
+
+        // 浮遊データキューブ (ネオンエッジ)
+        const cubeGeo = new THREE.BoxGeometry(cubeSize, cubeSize, cubeSize);
+        const cubeMat = new THREE.MeshStandardMaterial({
+          color: 0x312e81,
+          emissive: 0x7c3aed,
+          emissiveIntensity: 0.5,
+          roughness: 0.3
+        });
+        const cube = new THREE.Mesh(cubeGeo, cubeMat);
+        cube.position.set(x, cubeY, 0);
+        cube.rotation.x = 0.4;
+        cube.rotation.y = 0.4;
+        this.scene.add(cube);
+
+        this.obstacles.push({
+          type: 'sphere',
+          mesh: cube,
+          x: x,
+          y: cubeY,
+          radius: 1.4,
+          areaIndex: 2
+        });
+
+        // 背景装飾: 高層サーバータワービル (クリア時に一斉点灯する)
+        const bH = 14 + (seq * 4) % 12;
+        const bW = 3.5;
+        const bGeo = new THREE.BoxGeometry(bW, bH, bW);
+        const bMat = new THREE.MeshStandardMaterial({
+          color: 0x0f172a,
+          emissive: 0x1e1b4b,
+          emissiveIntensity: 0.3,
+          roughness: 0.5
+        });
+        const building = new THREE.Mesh(bGeo, bMat);
+        building.position.set(x + 2, bH / 2, -14);
+        this.scene.add(building);
+        this.areaBuildings.push(building);
+
+        // 手前側にも小ビル
+        const building2 = new THREE.Mesh(new THREE.BoxGeometry(bW, bH * 0.7, bW), bMat);
+        building2.position.set(x - 1, (bH * 0.7) / 2, 14);
+        this.scene.add(building2);
+        this.areaBuildings.push(building2);
+      }
+
+      // 入力イベント設定
+      setupEventListeners() {
+        const triggerJump = (e) => {
+          if (this.state === 'PLAYING') {
+            this.jump();
+          }
+        };
+
+        // タップ & クリック
+        window.addEventListener('pointerdown', (e) => {
+          // モーダル内のボタン操作時はゲームジャンプを無視
+          if (e.target.closest('#title-screen') || e.target.closest('#profile-modal')) return;
+          triggerJump(e);
+        });
+
+        // スペースキー & 上キー
+        window.addEventListener('keydown', (e) => {
+          if (e.code === 'Space' || e.code === 'ArrowUp') {
+            e.preventDefault();
+            if (this.state === 'PLAYING') {
+              this.jump();
+            }
+          }
+        });
+
+        // 画面リサイズ
+        window.addEventListener('resize', () => {
+          this.camera.aspect = window.innerWidth / window.innerHeight;
+          this.camera.updateProjectionMatrix();
+          this.renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // ボタン: フライトスタート
+        document.getElementById('btn-start-flight').addEventListener('click', () => {
+          this.startGame();
+        });
+
+        // ボタン: 直接プロフィール閲覧
+        document.getElementById('btn-view-profile-direct').addEventListener('click', () => {
+          this.showProfileModal(true);
+        });
+
+        // ボタン: リプレイ
+        document.getElementById('btn-replay-game').addEventListener('click', () => {
+          this.hideProfileModal();
+          this.startGame();
+        });
+
+        // ボタン: プロフィールモーダル閉じる
+        document.getElementById('btn-close-profile').addEventListener('click', () => {
+          this.hideProfileModal();
+          document.getElementById('title-screen').classList.remove('hidden');
+          document.getElementById('title-screen').style.opacity = '1';
+        });
+
+        // ボタン: X (Twitter) シェア
+        document.getElementById('btn-share-x').addEventListener('click', () => {
+          const text = encodeURIComponent(`3D自己紹介フライト「FLAP MY WORLD」で ${PROFILE.name} さんの世界を飛んでプロフィールを発見しました！✈️✨`);
+          const url = encodeURIComponent(window.location.href);
+          window.open(`https://twitter.com/intent/tweet?text=${text}&url=${url}`, '_blank');
+        });
+      }
+
+      // プロフィール文言をUIへ反映
+      updateProfileUI() {
+        document.getElementById('title-author-name').textContent = `${PROFILE.name} (${PROFILE.nameKana})`;
+        document.getElementById('title-author-tagline').textContent = PROFILE.tagline;
+        document.getElementById('profile-modal-tagline').textContent = `${PROFILE.name} - ${PROFILE.tagline}`;
+      }
+
+      // ゲーム開始
+      startGame() {
+        this.state = 'PLAYING';
+        this.speed = this.baseSpeed;
+        this.velocity.y = 0;
+        this.currentAreaIndex = 0;
+        this.unlockedMessages = [];
+
+        // 飛行機初期化
+        this.plane.position.set(0, 6.5, 0);
+        this.plane.rotation.set(0, 0, 0);
+
+        // ゲート通過状態リセット
+        this.gates.forEach(g => g.passed = false);
+
+        // UI表示切り替え
+        const titleScreen = document.getElementById('title-screen');
+        titleScreen.style.opacity = '0';
+        setTimeout(() => titleScreen.classList.add('hidden'), 500);
+
+        document.getElementById('game-hud').style.opacity = '1';
+        document.getElementById('game-controls-guide').style.opacity = '1';
+
+        this.updateHUD();
+      }
+
+      // ジャンプ (上昇)
+      jump() {
+        this.velocity.y = this.jumpForce;
+      }
+
+      // 衝突時のリスタート（そのエリアの入口からすぐ再開）
+      handleCrash() {
+        if (this.isInvincible) return;
+
+        // 衝突エフェクト (画面通知)
+        const toast = document.getElementById('crash-toast');
+        toast.style.opacity = '1';
+        setTimeout(() => toast.style.opacity = '0', 1600);
+
+        // 現在のエリア開始位置へ巻き戻し
+        const areaStartX = this.currentAreaIndex * this.areaLength;
+        this.plane.position.x = areaStartX + 4;
+        this.plane.position.y = 6.5;
+        this.velocity.y = 0;
+
+        // 無敵時間 (1秒間)
+        this.isInvincible = true;
+        this.planeMesh.material.opacity = 0.5;
+        this.planeMesh.material.transparent = true;
+
+        setTimeout(() => {
+          this.isInvincible = false;
+          this.planeMesh.material.opacity = 1.0;
+          this.planeMesh.material.transparent = false;
+        }, 1200);
+      }
+
+      // ゲート通過処理 (自己紹介メッセージ表示 & エリア切り替え)
+      onPassGate(gate) {
+        gate.passed = true;
+        const area = PROFILE.areas[gate.areaIndex];
+
+        // メッセージを蓄積
+        this.unlockedMessages.push(area);
+
+        // ゲート発光エフェクト
+        gate.group.scale.set(1.15, 1.15, 1.15);
+
+        // スローダウン演出 (メッセージを読めるように一時的に減速)
+        this.state = 'SLOWMO';
+        this.speed = this.baseSpeed * 0.28;
+
+        // メッセージバナー表示
+        this.showBanner(area);
+
+        // 次のエリアへの背景色・フォグの滑らかな移行
+        const nextIndex = Math.min(gate.areaIndex + 1, this.totalAreas - 1);
+        this.currentAreaIndex = nextIndex;
+        this.transitionAreaEnvironment(nextIndex);
+
+        // 2.8秒後に通常速度へ復帰
+        setTimeout(() => {
+          this.hideBanner();
+          if (gate.areaIndex === this.totalAreas - 1) {
+            // 全エリア制覇！
+            this.onGameClear();
+          } else {
+            this.state = 'PLAYING';
+            this.speed = this.baseSpeed;
+            this.updateHUD();
+          }
+        }, 2800);
+      }
+
+      // メッセージバナー表示
+      showBanner(area) {
+        const banner = document.getElementById('message-banner');
+        document.getElementById('banner-category').textContent = `✨ ${area.title}`;
+        document.getElementById('banner-title').textContent = area.keyword;
+        document.getElementById('banner-desc').textContent = area.message;
+
+        banner.style.opacity = '1';
+        banner.style.transform = 'scale(1)';
+      }
+
+      hideBanner() {
+        const banner = document.getElementById('message-banner');
+        banner.style.opacity = '0';
+        banner.style.transform = 'scale(0.9)';
+      }
+
+      // 環境の切り替え（空の色、霧の色）
+      transitionAreaEnvironment(targetIndex) {
+        const targetArea = PROFILE.areas[targetIndex];
+        const targetSky = new THREE.Color(targetArea.skyColor);
+        const targetFog = new THREE.Color(targetArea.fogColor);
+
+        // シーン背景 & フォグを補間
+        this.scene.background.lerp(targetSky, 0.8);
+        this.scene.fog.color.lerp(targetFog, 0.8);
+        this.planeLight.color.setHex(targetArea.accentColor);
+      }
+
+      // 全エリアクリア演出
+      onGameClear() {
+        this.state = 'CLEAR';
+        this.speed = this.baseSpeed * 0.5;
+
+        // 街の明かりが一斉に点灯する演出！
+        this.areaBuildings.forEach(b => {
+          b.material.emissive.setHex(0xfbbf24);
+          b.material.emissiveIntensity = 1.0;
+        });
+
+        // 光のアッパー演出
+        this.ambientLight.intensity = 1.4;
+
+        setTimeout(() => {
+          this.showProfileModal(false);
+        }, 1500);
+      }
+
+      // プロフィールモーダルの表示
+      showProfileModal(isDirectView = false) {
+        const modal = document.getElementById('profile-modal');
+        const container = document.getElementById('profile-cards-container');
+        container.innerHTML = '';
+
+        // 直接閲覧の場合は全エリアを表示、ゲーム経由の場合は集めたものを表示（未クリアなら全エリア）
+        const displayAreas = isDirectView || this.unlockedMessages.length === 0 
+          ? PROFILE.areas 
+          : this.unlockedMessages;
+
+        displayAreas.forEach((area, idx) => {
+          const card = document.createElement('div');
+          card.className = "bg-slate-800/80 p-4 rounded-2xl border border-slate-700/80 shadow-md";
+          card.innerHTML = `
+            <div class="flex items-center space-x-2 text-xs font-bold text-sky-400 mb-1">
+              <span class="w-2 h-2 rounded-full bg-sky-400"></span>
+              <span>${area.title}</span>
+            </div>
+            <h4 class="text-base sm:text-lg font-black text-white mb-1.5">${area.keyword}</h4>
+            <p class="text-xs sm:text-sm text-slate-300 leading-relaxed font-medium">${area.message}</p>
+          `;
+          container.appendChild(card);
+        });
+
+        modal.classList.remove('hidden');
+        setTimeout(() => modal.style.opacity = '1', 50);
+      }
+
+      hideProfileModal() {
+        const modal = document.getElementById('profile-modal');
+        modal.style.opacity = '0';
+        setTimeout(() => modal.classList.add('hidden'), 500);
+      }
+
+      // HUD更新
+      updateHUD() {
+        const current = PROFILE.areas[this.currentAreaIndex];
+        document.getElementById('hud-area-name').textContent = current.title;
+        document.getElementById('hud-area-keyword').textContent = current.keyword;
+
+        // ステップドット更新
+        for (let i = 1; i <= 3; i++) {
+          const dot = document.getElementById(`step-dot-${i}`);
+          if (i - 1 <= this.currentAreaIndex) {
+            dot.classList.remove('bg-slate-600');
+            dot.classList.add('bg-sky-400');
+          } else {
+            dot.classList.remove('bg-sky-400');
+            dot.classList.add('bg-slate-600');
+          }
+        }
+      }
+
+      // アニメーションループ
+      animate() {
+        requestAnimationFrame(this.animate);
+
+        const delta = Math.min(this.clock.getDelta(), 0.1);
+
+        if (this.state === 'PLAYING' || this.state === 'SLOWMO' || this.state === 'CLEAR') {
+          // 1. 前進運動
+          this.plane.position.x += this.speed * delta;
+
+          // 2. 垂直運動 (重力 & 速度)
+          if (this.state !== 'CLEAR') {
+            this.velocity.y += this.gravity * delta;
+            this.plane.position.y += this.velocity.y * delta;
+
+            // 上下限のバウンド制限
+            if (this.plane.position.y < this.planeYMin) {
+              this.plane.position.y = this.planeYMin;
+              this.velocity.y = 0;
+            }
+            if (this.plane.position.y > this.planeYMax) {
+              this.plane.position.y = this.planeYMax;
+              this.velocity.y = 0;
+            }
+          }
+
+          // 3. 飛行機の姿勢制御 (ピッチ回転: 上昇で上向き、下降で下向き)
+          const targetPitch = Math.max(-0.45, Math.min(0.45, this.velocity.y * 0.05));
+          this.planeMesh.rotation.z = THREE.MathUtils.lerp(this.planeMesh.rotation.z, -targetPitch, 0.15);
+
+          // 4. カメラ追従 (横斜めからスムーズに追従)
+          const targetCamX = this.plane.position.x - 7.5;
+          const targetCamY = Math.max(5.5, this.plane.position.y + 2.5);
+          const targetCamZ = 13.5;
+
+          this.camera.position.x = THREE.MathUtils.lerp(this.camera.position.x, targetCamX, 0.1);
+          this.camera.position.y = THREE.MathUtils.lerp(this.camera.position.y, targetCamY, 0.1);
+          this.camera.position.z = THREE.MathUtils.lerp(this.camera.position.z, targetCamZ, 0.1);
+          this.camera.lookAt(this.plane.position.x + 6, this.plane.position.y * 0.7, 0);
+
+          // ライト追従
+          this.planeLight.position.set(this.plane.position.x, this.plane.position.y + 1, 1);
+
+          // 5. ゲート通過判定
+          this.gates.forEach(gate => {
+            if (!gate.passed && this.plane.position.x >= gate.x) {
+              this.onPassGate(gate);
+            }
+          });
+
+          // 6. 障害物衝突判定
+          if (!this.isInvincible && this.state === 'PLAYING') {
+            this.checkCollisions();
+          }
+        } else if (this.state === 'TITLE') {
+          // タイトル画面でのアイドリング浮遊
+          const time = this.clock.getElapsedTime();
+          this.plane.position.y = 6.5 + Math.sin(time * 2.0) * 0.5;
+          this.camera.position.x = this.plane.position.x - 7.5;
+          this.camera.position.y = 8;
+          this.camera.position.z = 13.5;
+          this.camera.lookAt(this.plane.position.x + 6, 6, 0);
+        }
+
+        this.renderer.render(this.scene, this.camera);
+      }
+
+      // 衝突判定
+      checkCollisions() {
+        const px = this.plane.position.x;
+        const py = this.plane.position.y;
+        const pRadius = 0.55; // 飛行機の当たり判定半径 (少し甘くして快適に)
+
+        for (const obs of this.obstacles) {
+          // 現在のエリア以外の障害物はスキップ
+          if (obs.areaIndex !== this.currentAreaIndex) continue;
+
+          if (obs.type === 'sphere') {
+            const dist = Math.hypot(px - obs.x, py - obs.y);
+            if (dist < pRadius + obs.radius) {
+              this.handleCrash();
+              break;
+            }
+          } else if (obs.type === 'box') {
+            if (
+              px + pRadius > obs.xMin &&
+              px - pRadius < obs.xMax &&
+              py + pRadius > obs.yMin &&
+              py - pRadius < obs.yMax
+            ) {
+              this.handleCrash();
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    // ページロード時にゲーム初期化
+    window.addEventListener('DOMContentLoaded', () => {
+      window.game = new FlapMyWorldGame();
+    });
+  </script>
 </body>
 </html>
