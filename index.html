@@ -349,32 +349,32 @@
         this.scene.add(this.planeLight);
       }
 
-      // 3D紙飛行機の作成 (Three.jsの基本ジオメトリでシャープに折り紙を表現)
+      // 3D紙飛行機の作成 (先端が+X進行方向を向く折り紙ジオメトリ)
       createPaperPlane() {
         this.planeGroup = new THREE.Group();
 
-        // 紙飛行機ジオメトリ (左右対称の折り紙形状)
+        // 紙飛行機ジオメトリ (+Xが機首、-Xが尾翼、+Yが上、+Zが左翼手前)
         const planeGeo = new THREE.BufferGeometry();
         const vertices = new Float32Array([
-          // 上面・右翼
-          0.0, 0.0, 1.6,     // 機首 (先端)
-          -1.1, 0.25, -1.2,  // 右翼端
-          0.0, 0.35, -1.0,   // 中央折り目
+          // 上面・右翼 (奥側)
+          1.6, 0.0, 0.0,     // 機首 (先端)
+          -1.0, 0.35, 0.0,   // 中央折り目
+          -1.2, 0.25, -1.1,  // 右翼端 (奥)
 
-          // 上面・左翼
-          0.0, 0.0, 1.6,     // 機首
-          0.0, 0.35, -1.0,   // 中央折り目
-          1.1, 0.25, -1.2,   // 左翼端
+          // 上面・左翼 (手前側)
+          1.6, 0.0, 0.0,     // 機首
+          -1.2, 0.25, 1.1,   // 左翼端 (手前)
+          -1.0, 0.35, 0.0,   // 中央折り目
 
-          // 下部・胴体右
-          0.0, 0.0, 1.6,
-          0.0, -0.4, -0.9,   // 下端キール
-          -1.1, 0.25, -1.2,
+          // 下部・胴体右 (奥)
+          1.6, 0.0, 0.0,
+          -1.2, 0.25, -1.1,
+          -0.9, -0.4, 0.0,   // 下端キール
 
-          // 下部・胴体左
-          0.0, 0.0, 1.6,
-          1.1, 0.25, -1.2,
-          0.0, -0.4, -0.9
+          // 下部・胴体左 (手前)
+          1.6, 0.0, 0.0,
+          -0.9, -0.4, 0.0,
+          -1.2, 0.25, 1.1
         ]);
 
         planeGeo.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
@@ -383,18 +383,16 @@
         // 白い光沢紙マテリアル (裏表描画)
         const planeMat = new THREE.MeshStandardMaterial({
           color: 0xffffff,
-          roughness: 0.2,
+          roughness: 0.25,
           metalness: 0.1,
           side: THREE.DoubleSide
         });
 
         this.planeMesh = new THREE.Mesh(planeGeo, planeMat);
-        // 飛行方向(X軸方向)へ頭を向ける
-        this.planeMesh.rotation.y = -Math.PI / 2;
         this.planeMesh.scale.set(0.9, 0.9, 0.9);
         this.planeGroup.add(this.planeMesh);
 
-        // 紙飛行機の縁を飾るネオンライン
+        // 紙飛行機の折り目と輪郭を強調するネオングローライン
         const edgeGeo = new THREE.EdgesGeometry(planeGeo);
         const edgeMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, linewidth: 2 });
         const edges = new THREE.LineSegments(edgeGeo, edgeMat);
@@ -970,9 +968,11 @@
             }
           }
 
-          // 3. 飛行機の姿勢制御 (ピッチ回転: 上昇で上向き、下降で下向き)
+          // 3. 飛行機の姿勢制御 (ピッチ回転: 上昇で機首が上、下降で機首が下)
           const targetPitch = Math.max(-0.45, Math.min(0.45, this.velocity.y * 0.05));
-          this.planeMesh.rotation.z = THREE.MathUtils.lerp(this.planeMesh.rotation.z, -targetPitch, 0.15);
+          this.planeMesh.rotation.z = THREE.MathUtils.lerp(this.planeMesh.rotation.z, targetPitch, 0.18);
+          // 速度や状態に合わせた微細なバンク（ロール）
+          this.planeMesh.rotation.x = THREE.MathUtils.lerp(this.planeMesh.rotation.x, -targetPitch * 0.3, 0.15);
 
           // 4. カメラ追従 (横斜めからスムーズに追従)
           const targetCamX = this.plane.position.x - 7.5;
